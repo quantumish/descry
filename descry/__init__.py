@@ -7,7 +7,15 @@ from PIL import Image
 from torch import nn
 from torch.utils.data import Dataset
 from torchvision.transforms import ToPILImage, ToTensor
-from transformers import ViTConfig, ViTFeatureExtractor, ViTModel
+from transformers import (
+    SegformerConfig,
+    SegformerFeatureExtractor,
+    SegformerForSemanticSegmentation,
+    SegformerModel,
+    ViTConfig,
+    ViTFeatureExtractor,
+    ViTModel,
+)
 
 
 class FashionDataset(Dataset):
@@ -29,36 +37,37 @@ class FashionDataset(Dataset):
 class VisionTransformer(nn.Module):
     def __init__(self):
         super(VisionTransformer, self).__init__()
-        self.feature_extractor = ViTFeatureExtractor(q)
-        self.model = ViTModel(ViTConfig())
-        self.head = nn.Sequential(
-            nn.Conv2d(1,1,8),
-            nn.MaxPool2d(4),
-            nn.Flatten(1),
-            nn.Linear(8930, 4096),
-            nn.Unflatten(1, (1,64,64)),
-            # nn.ReLU(),
-            # # nn.MaxPool2d(4),
-            # # nn.Flatten(1),
-            # nn.Linear(2046, 4096),
-            # nn.(),
-            # nn.Linear(1024, 4096),
-            # nn.ReLU(),
-            # nn.Unflatten(1, (1, 64, 64)),            
-            nn.Upsample(size=(128, 128)),        
-            nn.Conv2d(1, 1, 4),
-            nn.ReLU(),
-            nn.Upsample(size=(1024, 1024)),
-            #nn.Conv2d(1, 1, 1),
-        )
+        self.feature_extractor = SegformerFeatureExtractor.from_pretrained("nvidia/segformer-b0-finetuned-ade-512-512")        
+        self.model =  SegformerForSemanticSegmentation.from_pretrained("nvidia/segformer-b0-finetuned-ade-512-512")
+        # self.head = nn.Sequential(
+        #     nn.Conv2d(1,1,8),
+        #     nn.MaxPool2d(4),
+        #     nn.Flatten(1),
+        #     nn.Linear(8930, 4096),
+        #     nn.Unflatten(1, (1,64,64)),
+        #     # nn.ReLU(),
+        #     # # nn.MaxPool2d(4),
+        #     # # nn.Flatten(1),
+        #     # nn.Linear(2046, 4096),
+        #     # nn.(),
+        #     # nn.Linear(1024, 4096),
+        #     # nn.ReLU(),
+        #     # nn.Unflatten(1, (1, 64, 64)),            
+        #     nn.Upsample(size=(128, 128)),        
+        #     nn.Conv2d(1, 1, 4),
+        #     nn.ReLU(),
+        #     nn.Upsample(size=(1024, 1024)),
+        #     #nn.Conv2d(1, 1, 1),
+        # ) 
 
     def forward(self, image, mask):
         inputs = self.feature_extractor(image, return_tensors="pt")
-        out = self.model(**inputs).last_hidden_state
-        out = out.view([1, 1, 197, 768])
+        out = self.model(**inputs).logits
+        out = nn.Upsample(size=(1024,1024))(out)
+        print(out.shape)
         # out = nn.functional.interpolate(out, (197, 768))
         # out = torch.reshape(out, (197, 768))
-        out = self.head(out)
+        #out = self.head(out)
         return out
     # out -= out.min(1, keepdim=True)[0]
         # out /= out.max(1, keepdim=True)[0]
