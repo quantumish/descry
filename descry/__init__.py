@@ -31,28 +31,32 @@ class VisionTransformer(nn.Module):
         super(VisionTransformer, self).__init__()
         self.feature_extractor = ViTFeatureExtractor.from_pretrained("google/vit-base-patch16-224-in21k")
         self.model = ViTModel.from_pretrained("google/vit-base-patch16-224-in21k")
-        # self.head = nn.Sequential(            
-        #     # nn.Unflatten(1, torch.Size([1, 64, 64])),
-        #     # nn.ConvTranspose2d(1, 8, 8),
-        #     # nn.ConvTranspose2d(8, 1, 16),
-        #     # nn.Upsample(size=(512, 512)),
-        #     # nn.Conv2d(1, 1, (4, 4)),
-        #     # nn.ReLU(),            
-        #     # nn.Upsample(size=(512, 512)),
-        #     # nn.Conv2d(1, 1, (4, 4)),
-        #     # nn.ReLU(),
-        #     nn.Upsample(size=(1024, 1024)),
-        #     nn.ReLU(),            
-        # )
+        self.head = nn.Sequential(
+            nn.ReLU(),
+            nn.Conv2d(1, 1, (1, 1)),
+            nn.Sigmoid(),
+            # nn.MaxPool2d(4),
+            # nn.Flatten(1),
+            # nn.Linear(2046, 4096),
+            # nn.ReLU(),
+            # nn.Linear(1024, 4096),
+            # nn.ReLU(),
+            # nn.Unflatten(1, (1, 64, 64)),
+            #nn.Upsample(size=(128, 128)),        
+            #nn.Conv2d(1, 1, 4),
+            #nn.ReLU(),
+            #nn.Upsample(size=(1024, 1024)),
+            #nn.Conv2d(1, 1, 1),
+        )
 
     def forward(self, image, mask):
         inputs = self.feature_extractor(image, return_tensors="pt")
         out = self.model(**inputs).last_hidden_state
         out = out.view([1, 1, 197, 768])
-        out = nn.functional.interpolate(out, (1024, 1024))
+        # out = nn.functional.interpolate(out, (197, 768))
         # out = torch.reshape(out, (197, 768))
-        # out = self.head(out)        
-        return nn.functional.relu(out)
+        out = self.head(out)
+        return torch.floor(out*58)
     # out -= out.min(1, keepdim=True)[0]
         # out /= out.max(1, keepdim=True)[0]
         # out *= 58
