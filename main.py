@@ -1,8 +1,6 @@
 import matplotlib.pyplot as plt
 import torch
 from PIL import Image
-from torch import nn
-from torchvision.transforms import ToPILImage, ToTensor
 
 from descry import FashionDataset, VisionTransformer
 
@@ -11,11 +9,18 @@ vt = VisionTransformer()
 # image = dataset["test"]["image"][0]
 # print(image.shape)
 data = FashionDataset("/home/quantumish/aux/fashion-seg/")
-image = data[3][0]
-image = ToTensor()(image)
-print(image.shape)
-# print(1024-image.shape[1], 1024-image.shape[2])
-image = nn.functional.pad(image, (237, 237, 100, 99), mode="replicate")
-
-print(type(image), image.size)
-vt.forward(image, image)
+datapoint = data[3]
+criterion = torch.nn.CrossEntropyLoss()
+optimizer = torch.optim.Adam(vt.parameters(), lr=8e-2)
+for i in range(1000):
+    out = vt.forward(datapoint[0], datapoint[1])
+    loss = criterion(out[0], datapoint[1])
+    loss.backward()
+    optimizer.step()
+    optimizer.zero_grad()
+    print(loss.item())
+    if (i % 20 == 0 and i != 0):
+        plt.imshow(out.detach().numpy()[0, 0, :, :])
+        plt.show()
+        plt.imshow(datapoint[1][0, :, :])
+        plt.show()
