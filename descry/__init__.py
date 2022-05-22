@@ -7,13 +7,7 @@ from PIL import Image
 from torch import nn
 from torch.utils.data import Dataset
 from torchvision.transforms import ToPILImage, ToTensor
-from transformers import (
-    SegformerConfig,
-    SegformerModel,
-    ViTConfig,
-    ViTFeatureExtractor,
-    ViTModel,
-)
+from transformers import ViTConfig, ViTFeatureExtractor, ViTModel
 
 
 class FashionDataset(Dataset):
@@ -35,23 +29,25 @@ class FashionDataset(Dataset):
 class VisionTransformer(nn.Module):
     def __init__(self):
         super(VisionTransformer, self).__init__()
-        self.feature_extractor = ViTFeatureExtractor.from_pretrained("google/vit-base-patch16-224-in21k")
-        self.model = ViTModel.from_pretrained("google/vit-base-patch16-224-in21k")
+        self.feature_extractor = ViTFeatureExtractor(q)
+        self.model = ViTModel(ViTConfig())
         self.head = nn.Sequential(
-        nn.Flatten(1),
-            nn.Unflatten(1, (1,197,768)),
-            # nn.ReLU(), 
+            nn.Conv2d(1,1,8),
             nn.MaxPool2d(4),
             nn.Flatten(1),
-            nn.Linear(9408, 4096),
-            nn.ReLU(),
+            nn.Linear(8930, 4096),
+            nn.Unflatten(1, (1,64,64)),
+            # nn.ReLU(),
+            # # nn.MaxPool2d(4),
+            # # nn.Flatten(1),
+            # nn.Linear(2046, 4096),
+            # nn.(),
             # nn.Linear(1024, 4096),
             # nn.ReLU(),
-            nn.Unflatten(1, (1, 64, 64)),
-            nn.Upsample(size=(128, 128)),
-            nn.MaxPool2d(2),
-            #nn.Conv2d(1, 1, 4),
-            #nn.ReLU(),
+            # nn.Unflatten(1, (1, 64, 64)),            
+            nn.Upsample(size=(128, 128)),        
+            nn.Conv2d(1, 1, 4),
+            nn.ReLU(),
             nn.Upsample(size=(1024, 1024)),
             #nn.Conv2d(1, 1, 1),
         )
