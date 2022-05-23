@@ -63,8 +63,8 @@ class VisionTransformer(nn.Module):
     def forward(self, image, mask):
         inputs = self.feature_extractor(image, return_tensors="pt")
         out = self.model(**inputs).logits
-        out = nn.Upsample(size=(1024,1024))(out)
-        print(out.shape)
+        #out = nn.Upsample(size=(1024,1024))(out)
+        #print(out.shape)
         # out = nn.functional.interpolate(out, (197, 768))
         # out = torch.reshape(out, (197, 768))
         #out = self.head(out)

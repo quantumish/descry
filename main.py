@@ -77,13 +77,23 @@ for i in range(1000):
     datapoint = data[3]
     out = vt.forward(datapoint[0], datapoint[1])
     print(out.shape)
-    for c in range(58):
-        ax = plt.subplot()
-        im = plt.imshow(out.detach().numpy()[0, c, :, :])
-        plt.colorbar(im)
-        plt.title(classes[c])
-        plt.show() 
-    loss = criterion(out[0], datapoint[1])
+    # for c in range(58):
+    #     ax = plt.subplot()
+    #     im = plt.imshow(out.detach().numpy()[0, c, :, :])
+    #     plt.colorbar(im)
+    #     plt.title(classes[c])
+    #     plt.show()
+    full = torch.zeros(1, 1, 128, 128)
+    for a in range(128):
+        for b in range(128):
+            maxc = -100000
+            for c in range(58):
+                if out[0][c][a][b].item() > maxc:
+                    maxc = c
+            full[0][0][a][b] = maxc
+    full = torch.floor(torch.nn.Upsample(size=(1024, 1024))(full))
+    print(full.dtype, datapoint[1].dtype)
+    loss = criterion(full, datapoint[1].long())
     loss.backward()
     optimizer.step()
     optimizer.zero_grad()
