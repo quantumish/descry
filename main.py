@@ -4,6 +4,14 @@ from PIL import Image
 
 from descry import FashionDataset, VisionTransformer
 
+import wandb
+
+wandb.init(project="descry", entity="quantumish")
+
+wandb.config = {
+  "learning_rate": 0.001,
+  "epochs": 100,
+}
 
 def plot_grad_flow(named_parameters):
     ave_grads = []
@@ -26,28 +34,21 @@ vt = VisionTransformer()
 # image = dataset["test"]["image"][0]
 # print(image.shape)
 data = FashionDataset("/home/quantumish/aux/fashion-seg/")
-criterion = torch.nn.CrossEntropyLoss()
-optimizer = torch.optim.Adam(vt.parameters(), lr=3e-2)
+criterion = torch.nn.MSELoss()
+optimizer = torch.optim.Adam(vt.parameters(), lr=3e-3)
 datapoint = data[3]
 for epoch in range(1000):
     out = vt.forward(datapoint[0], datapoint[1])
-    if (epoch != 0 and epoch % 5 == 0):
-        for c in range(5):
-            ax = plt.subplot()
-            im = plt.imshow(out.detach().numpy()[0, c, :, :])
-            plt.colorbar(im)
-            plt.show()
-            ax = plt.subplot()
-            im = plt.imshow(datapoint[1][0, c, :, :])
-            plt.colorbar(im)
-            plt.title("(actual)")
-            plt.show()
-    
+
     loss = criterion(out, datapoint[1].float())    
     loss.backward()
     optimizer.step()
     #plot_grad_flow(vt.named_parameters())
     #plt.show()
     optimizer.zero_grad()
-    print(loss.item())
+    # wandb.log({"loss": loss.item()})
+    wandb.log({"null": [wandb.Image(out.detach().numpy()[0, 0, :, :], caption="Null")]})
+    wandb.log({"shirt": [wandb.Image(out.detach().numpy()[0, 3, :, :], caption="shirt")]})
+    wandb.log({"boots": [wandb.Image(out.detach().numpy()[0, 2, :, :], caption="boots")]})
+    # print(loss.item())
 
