@@ -42,18 +42,24 @@ class FashionDataset(Dataset):
         mask = ToTensor()(raw_mask)
         mask = nn.functional.pad(mask, (237, 237, 100, 99), "constant", 0)
         mask = self.__to_one_hot(torch.round(mask*58).long(), 58)
+        mask = mask.transpose(3, 1).transpose(2,3)
+        target = torch.zeros(1, 150, 1024, 1024)
+        target[0, :58, :, :] = mask
         # sep_mask = torch.zeros(1, self.NUM_CLASSES, 
         # for i in range(1024):
         #     for j in range(1024):
 
-        return (image, mask.transpose(3, 1).transpose(2,3))
+        return (image, target)
 
 class VisionTransformer(nn.Module):
     def __init__(self):
         super(VisionTransformer, self).__init__()
         self.feature_extractor = SegformerFeatureExtractor.from_pretrained("nvidia/segformer-b0-finetuned-ade-512-512")        
         self.model =  SegformerForSemanticSegmentation.from_pretrained("nvidia/segformer-b0-finetuned-ade-512-512")
-        # self.head = nn.Sequential(
+        self.head = nn.Sequential(
+            nn.Sigmoid(),
+            nn.Upsample(size=(1024, 1024)),
+        )
         #     nn.Conv2d(1,1,8),
         #     nn.MaxPool2d(4),
         #     nn.Flatten(1),
@@ -77,6 +83,7 @@ class VisionTransformer(nn.Module):
     def forward(self, image, mask):
         inputs = self.feature_extractor(image, return_tensors="pt")
         out = self.model(**inputs).logits
+        out = self.head(out)
         #out = nn.Upsample(size=(1024,1024))(out)
         #print(out.shape)
         # out = nn.functional.interpolate(out, (197, 768))
