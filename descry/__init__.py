@@ -35,8 +35,8 @@ class FashionDataset(Dataset):
         return 1000 # TODO generalize
 
     def __getitem__(self, n):
-        raw_image = Image.open(os.path.join(self.path, f"png_images/IMAGES/img_{n:04}.png"))
-        raw_mask = Image.open(os.path.join(self.path, f"png_masks/MASKS/seg_{n:04}.png"))
+        raw_image = Image.open(os.path.join(self.path, f"png_images/IMAGES/img_{n+1:04}.png"))
+        raw_mask = Image.open(os.path.join(self.path, f"png_masks/MASKS/seg_{n+1:04}.png"))
         image = ToTensor()(raw_image)
         image = nn.functional.pad(image, (237, 237, 100, 99), "constant", 0)
         mask = ToTensor()(raw_mask)
@@ -45,7 +45,6 @@ class FashionDataset(Dataset):
         mask = mask.transpose(3, 1).transpose(2,3)
         target = torch.zeros(1, 150, 1024, 1024)
         target[0, :58, :, :] = mask
-
         return (image, target)
 
 class VisionTransformer(nn.Module):
@@ -61,6 +60,6 @@ class VisionTransformer(nn.Module):
 
     def forward(self, image, mask):
         inputs = self.feature_extractor(image, return_tensors="pt")
-        out = self.model(**inputs).logits
+        out = self.model(inputs.data["pixel_values"].cuda()).logits
         out = self.head(out)
         return out
