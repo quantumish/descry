@@ -28,8 +28,8 @@ class FashionDataset(Dataset):
 
     def __getitem__(self, n):
         return (
-            torch.load(os.path.join(self.path, f"tensor_images/img_{n}.pt")),
-            torch.load(os.path.join(self.path, f"tensor_masks/_{n}.pt")),
+            torch.load(os.path.join(self.path, f"tensor_images/img_down_{n}.pt")),
+            torch.load(os.path.join(self.path, f"tensor_masks/_down_{n}.pt")),
         )
 
 class VisionTransformer(nn.Module):
@@ -42,11 +42,14 @@ class VisionTransformer(nn.Module):
         self.model.train() 
         self.head = nn.Sequential(
             nn.Sigmoid(),
-            nn.Upsample(size=(1024, 1024)),
+            nn.Upsample(size=(64, 64)),
+            nn.Conv2d(58, 58, 4),
+            nn.ReLU(),
+            nn.Upsample(size=(128, 128)),
         )
 
     def forward(self, image):
-        inputs = self.feature_extractor(image.numpy(), return_tensors="pt")
+        inputs = self.feature_extractor(list(image.numpy()), return_tensors="pt")
         out = self.model(inputs.data["pixel_values"].cuda()).logits
         out = self.head(torch.narrow(out, 1, 0, 58))
         return out
