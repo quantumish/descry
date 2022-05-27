@@ -33,23 +33,23 @@ class FashionDataset(Dataset):
         )
 
 class VisionTransformer(nn.Module):
-    def __init__(self):
+    def __init__(self, **kwargs):
         super(VisionTransformer, self).__init__()
-        self.feature_extractor = SegformerFeatureExtractor.from_pretrained("nvidia/segformer-b0-finetuned-ade-512-512")
+        self.feature_extractor = SegformerFeatureExtractor()
         self.feature_extractor.do_resize = False
         self.feature_extractor.do_normalize = False
-        self.model = SegformerForSemanticSegmentation.from_pretrained("nvidia/segformer-b0-finetuned-ade-512-512")
+        self.model = SegformerForSemanticSegmentation(SegformerConfig(num_labels=58, **kwargs))
         self.model.train() 
-        self.head = nn.Sequential(
-            nn.Sigmoid(),
+        self.head = nn.Sequential(            
             nn.Upsample(size=(64, 64)),
             nn.Conv2d(58, 58, 4),
             nn.ReLU(),
             nn.Upsample(size=(128, 128)),
+            nn.Softmax(dim=1)
         )
 
     def forward(self, image):
         inputs = self.feature_extractor(list(image.numpy()), return_tensors="pt")
         out = self.model(inputs.data["pixel_values"].cuda()).logits
-        out = self.head(torch.narrow(out, 1, 0, 58))
+        out = self.head(out)
         return out
