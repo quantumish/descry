@@ -29,7 +29,7 @@ class FashionDataset(Dataset):
     def __getitem__(self, n):
         return (
             torch.load(os.path.join(self.path, f"tensor_images/img_down_{n}.pt")),
-            torch.load(os.path.join(self.path, f"tensor_masks/_down_{n}.pt")),
+            torch.load(os.path.join(self.path, f"tensor_masks/_down_{n}.pt"))[0],
         )
 
 class VisionTransformer(nn.Module):

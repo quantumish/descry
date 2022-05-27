@@ -21,7 +21,7 @@ def serialize(path):
         image = nn.functional.pad(image, (237, 237, 100, 99), "constant", 0)
         image = nn.functional.interpolate(image.reshape(1,1,3,1024,1024), (3,128,128)).reshape(3,128,128)
         
-        mask = ToTensor()(raw_mask)
+        mask = torch.tensor(np.array(raw_mask.getdata()).reshape(1,1024,1024))
         mask = nn.functional.pad(mask, (237, 237, 100, 99), "constant", 0)
         mask = __to_one_hot(torch.round(mask*58).long(), 58)
         mask = mask.transpose(3, 1).transpose(2, 3)

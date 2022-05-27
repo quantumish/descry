@@ -6,27 +6,26 @@ metric:
 parameters:
   learning_rate:
     min: 0.0001
-    max: 0.1
+    max: 0.01
   weight_decay:
-    min: 0.0001
+    min: 0.00005
     max: 0.1  
   epochs:
     min: 5
     max: 200
-  dr_hidden:
-    min: 0.0
-    max: 0.2
-  dr_classifier:
-    min: 0.0
-    max: 0.2
-  dr_attention:
-    min: 0.0
-    max: 0.2
-  dr_blocks:
-    min: 0.0
-    max: 0.2
-  encoder_blocks:
-    values:
-      - 2
-      - 4
-      - 8
+  # dr_hidden:
+  #   min: 0.0
+  #   max: 0.2
+  # dr_classifier:
+  #   min: 0.0
+  #   max: 0.1
+  # dr_attention:
+  #   min: 0.0
+  #   max: 0.1
+  # dr_blocks:
+  #   min: 0.0
+  #   max: 0.1
+  # encoder_blocks:
+  #   values:
+  #     - 2
+  #     - 4
