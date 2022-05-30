@@ -5,7 +5,7 @@ import torch
 from PIL import Image
 from torch.utils.data import DataLoader
 
-# import wandb
+import wandb
 from descry import FashionDataset, VisionTransformer
 
 hyper_defaults = dict(
@@ -22,7 +22,7 @@ hyper_defaults = dict(
     encoder_blocks=4,
 )
 
-# wandb.init(project="descry", entity="quantumish", config=hyper_defaults)
+#wandb.init(project="descry", entity="quantumish", config=hyper_defaults)
 config = hyper_defaults # wandb.config
 
 torch.backends.cudnn.benchmark = True  # Performance tweak for GPUs
@@ -48,6 +48,9 @@ optim_map = dict(
 )
 
 data = FashionDataset("/home/quantumish/aux/fashion-seg/")
+plt.imshow(data[2][0].transpose(0,2))
+plt.savefig("c.png")
+exit()
 train, test = torch.utils.data.random_split(
     data,
     [int(0.7 * (len(data))), (len(data))-int(0.7 * len(data))]
@@ -71,12 +74,6 @@ for epoch in range(config["epochs"]):
         optimizer.step()
         avg_loss += loss.item()
         optimizer.zero_grad(set_to_none=True)
-        if random.randint(0,100) == 2:
-            for j in range(10):
-                f, axarr = plt.subplots(1,2)
-                axarr[0].imshow(out.cpu().detach()[0,j,:,:])
-                axarr[1].imshow(batch[1][0,j,:,:])
-                plt.savefig("./check_{}_{}.png".format(j, epoch))
             
     avg_loss /= len(train)
     val_loss = 0
@@ -88,12 +85,12 @@ for epoch in range(config["epochs"]):
             val_loss += loss.item()
         val_loss /= len(test)
         bench_thing = vt.forward(data[2][0].reshape(1, 3, 128, 128).float()).cpu().numpy()[0]
-        # wandb.log({
-        #     "loss": avg_loss,
-        #     "val_loss": val_loss,
-        #     "outputs": [wandb.Image(i) for i in bench_thing], 
-        #     # "val_outputs": [wandb.Image(i) for i in val_last], 
-        # })
+        wandb.log({
+            "loss": avg_loss,
+            "val_loss": val_loss,
+            "outputs": [wandb.Image(i) for i in bench_thing], 
+            # "val_outputs": [wandb.Image(i) for i in val_last], 
+        })
   
     print("Epoch {} val: {}".format(avg_loss, val_loss))
     vt.train()

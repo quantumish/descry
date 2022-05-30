@@ -21,15 +21,14 @@ from transformers import (
 class FashionDataset(Dataset):
     def __init__(self, path):
         self.path = path
-        self.NUM_CLASSES = 58
 
     def __len__(self):
-        return 1000 # TODO generalize
+        return 8279 # TODO generalize
 
     def __getitem__(self, n):
         return (
-            torch.load(os.path.join(self.path, f"tensor_images/img_down_{n}.pt")),
-            torch.load(os.path.join(self.path, f"tensor_masks/_down_{n}.pt"))[0],
+            torch.load(os.path.join(self.path, f"tensor_images/{n+1:04}.pt")),
+            torch.load(os.path.join(self.path, f"tensor_masks/{n+1:04}.pt"))[0],
         )
 
 class VisionTransformer(nn.Module):
@@ -38,11 +37,11 @@ class VisionTransformer(nn.Module):
         self.feature_extractor = SegformerFeatureExtractor()
         self.feature_extractor.do_resize = False
         self.feature_extractor.do_normalize = False
-        self.model = SegformerForSemanticSegmentation(SegformerConfig(num_labels=58, **kwargs))
-        self.model.train() 
-        self.head = nn.Sequential(            
+        self.model = SegformerForSemanticSegmentation(SegformerConfig(num_labels=13, **kwargs))
+        self.model.train()
+        self.head = nn.Sequential(
             nn.Upsample(size=(64, 64)),
-            nn.Conv2d(58, 58, 4),
+            nn.Conv2d(13, 13, 4),
             nn.ReLU(),
             nn.Upsample(size=(128, 128)),
             nn.Softmax(dim=1)
