@@ -1,0 +1,23 @@
+
+#+TITLE: ~descry~
+
+* About
+SegFormer with custom head trained on the [[https://www.kaggle.com/datasets/rajkumarl/people-clothing-segmentation][People Clothing Segmentation]] dataset.
+
+* Usage
+This model requires a working CUDA installation. It also uses  ~poetry~ to manage its dependencies, which can be installed by following the instructions [[https://github.com/python-poetry/poetry#installation][here]]. The training script also uses the Weights & Biases library, and so you will need to make an account to us the training script as-is (although it does not require much modification to remove the W&B dependency).
+
+Run ~poetry shell~ and then ~poetry install~ in the project directory before proceeding.
+
+
+** Data Setup
+1. Download the Kaggle dataset referenced in the About section to your machine.
+2. Run the ~preprocess.py~ script, making sure to update the path inside of it to the path to your dataset.
+
+** Training
+1. Run ~wandb login~.
+2. Replace ~entity="quantumish"~ to your username and replace the path once more inside ~main.py~.
+3. Run ~main.py~.
+
+* Documentation
+~pdoc~ is included as a dev dependency. Run ~pdoc descry~ to generate documentation.
