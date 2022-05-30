@@ -1,13 +1,12 @@
-import random
+"""Training script for `descry`."""
 
-import matplotlib.pyplot as plt
 import torch
-from PIL import Image
 from torch.utils.data import DataLoader
 
 import wandb
 from descry import FashionDataset, VisionTransformer
 
+# set hyperparameter defaults for W&B
 hyper_defaults = dict(
     learning_rate=0.0001,
     lr_decay=0,
@@ -22,14 +21,17 @@ hyper_defaults = dict(
     encoder_blocks=4,
 )
 
-#wandb.init(project="descry", entity="quantumish", config=hyper_defaults)
-config = hyper_defaults # wandb.config
+# wandb initialization
+wandb.init(project="descry", entity="quantumish", config=hyper_defaults)
+config = wandb.config
 
 torch.backends.cudnn.benchmark = True  # Performance tweak for GPUs
+# disable a variety of things that slow down runtime
 torch.autograd.set_detect_anomaly(False)
 torch.autograd.profiler.emit_nvtx(False)
 torch.autograd.profiler.profile(False)
 
+# initialize and copy model to gpu
 cuda = torch.device('cuda')
 vt = VisionTransformer(
     hidden_dropout_prob=config["dr_hidden"],
@@ -39,6 +41,7 @@ vt = VisionTransformer(
     num_encoder_blocks=config["encoder_blocks"],
 ).to(cuda)
 
+# map the wandb config optimizer string to an actual function
 optim_map = dict(
     adam=torch.optim.Adam,
     nadam=torch.optim.NAdam,
@@ -47,10 +50,8 @@ optim_map = dict(
     rmsprop=torch.optim.RMSprop
 )
 
+# split the dataset and initialize batched data loaders
 data = FashionDataset("/home/quantumish/aux/fashion-seg/")
-plt.imshow(data[2][0].transpose(0,2))
-plt.savefig("c.png")
-exit()
 train, test = torch.utils.data.random_split(
     data,
     [int(0.7 * (len(data))), (len(data))-int(0.7 * len(data))]
@@ -67,30 +68,31 @@ optimizer = optim_map[config["optimizer"]](
 )
 for epoch in range(config["epochs"]):
     avg_loss = 0
-    for batch in trainloader:    
+    for batch in trainloader:
         out = vt.forward(batch[0].float())
         loss = criterion(out, batch[1].float().cuda())
         loss.backward()
         optimizer.step()
         avg_loss += loss.item()
         optimizer.zero_grad(set_to_none=True)
-            
+
     avg_loss /= len(train)
     val_loss = 0
-    vt.eval()
-    with torch.no_grad():
+    vt.eval() # put network in eval mode just in case
+    with torch.no_grad(): # disable grads during validation
         for batch in testloader:
             out = vt.forward(batch[0].float())
             loss = criterion(out, batch[1].float().cuda())
             val_loss += loss.item()
         val_loss /= len(test)
-        bench_thing = vt.forward(data[2][0].reshape(1, 3, 128, 128).float()).cpu().numpy()[0]
+        # preview model outputs 
+        # bench_thing = vt.forward(data[2][0].reshape(1, 3, 128, 128).float()).cpu().numpy()[0]
         wandb.log({
             "loss": avg_loss,
             "val_loss": val_loss,
-            "outputs": [wandb.Image(i) for i in bench_thing], 
-            # "val_outputs": [wandb.Image(i) for i in val_last], 
+            # "outputs": [wandb.Image(i) for i in bench_thing],
+            # "val_outputs": [wandb.Image(i) for i in val_last],
         })
-  
+
     print("Epoch {} val: {}".format(avg_loss, val_loss))
     vt.train()

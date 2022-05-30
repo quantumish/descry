@@ -13,6 +13,7 @@ from torchvision.transforms import ToPILImage, ToTensor
 
 warnings.filterwarnings("ignore")
 
+# converts (128,128) to one hot encoded (num_classes,128,128)
 def __to_one_hot(y, num_classes):
     scatter_dim = len(y.size())
     y_tensor = y.view(*y.size(), -1)
@@ -20,6 +21,9 @@ def __to_one_hot(y, num_classes):
 
     return zeros.scatter(scatter_dim, y_tensor, 1)
 
+# dictionary of label groups to consider as the same.
+# labels in plainlist are not modified
+# labels in blacklist have their images not processed
 collapse_map = {
     "shirt": [38,49,51,5,48,54],
     "glasses": [17,47],
@@ -32,6 +36,7 @@ collapse_map = {
     "plainlist": [0,3,14,19,20,41]
 }
 
+# Augmentation pipeline applying 1-3 of the following augmentations
 seq = iaa.SomeOf((1,3), [
     iaa.GaussianBlur((0, 3.0)),
     iaa.Affine(translate_px=({"x": (-100, 100)})),
@@ -47,6 +52,7 @@ seq = iaa.SomeOf((1,3), [
     iaa.ElasticTransformation(alpha=(0,5.0), sigma=0.25),
 ])
 
+# Processes dataset
 def serialize(path):
     for n in range(1000):
         skip = False
@@ -54,6 +60,7 @@ def serialize(path):
         colors = [i[1] for i in png_mask.getcolors()]
         raw_mask = np.array(png_mask)
         png_mask.close()
+        # process each color (label) in mask and replace with corresponding group (or ignore if in blacklist)
         for i in colors:
             if i in collapse_map["plainlist"]:
                 raw_mask[raw_mask == i] = collapse_map["plainlist"].index(i)
@@ -75,32 +82,33 @@ def serialize(path):
                 skip = True
                 break
 
-        if skip:
+        if skip: # skip any mask with a blacklisted color (label)
             continue
 
-        print(n)
-        raw_image = Image.open(os.path.join(path, f"png_images/IMAGES/img_{n+1:04}.png"))
+        raw_image = Image.open(os.path.join(path, f"png_images/IMAGES/img_{n+1:04}.png")) # open the corresponding image
         image = np.array(raw_image)
 
+        # create new directories if they don't exist
+        if not os.path.isdir(os.path.join(path, "tensor_images")):
+            os.mkdir(os.path.join(path, "tensor_images"))
+        if not os.path.isdir(os.path.join(path, "tensor_masks")):
+            os.mkdir(os.path.join(path, "tensor_masks"))
+
+        # produce 17 different augmentations of each image then process each
         for i in range(17):
             vimage, vmask = seq(images=image.reshape(1,825,550,3), segmentation_maps=raw_mask.reshape(1,825,550,1))
+
+            # pad to (1024, 1024), interpolate to (128,128)
             vimage = torch.tensor(vimage.transpose()[:, :, :, 0]).transpose(1,2)
             vimage = nn.functional.pad(vimage, (237, 237, 100, 99), "constant", 0)
             vimage = nn.functional.interpolate(vimage.reshape(1,1,3,1024,1024), (3,128,128)).reshape(3,128,128)
-
+            
             vmask = nn.functional.pad(torch.tensor(vmask[0,:,:,0]), (237, 237, 100, 99), "constant", 0)
             vmask = __to_one_hot(vmask.long(), 13).transpose(0,2)
             vmask = nn.functional.interpolate(vmask.reshape(1,1,13,1024,1024).float(), (13,128,128)).reshape(1,13,128,128)
 
-            if not os.path.isdir(os.path.join(path, "tensor_images")):
-                os.mkdir(os.path.join(path, "tensor_images"))
-            if not os.path.isdir(os.path.join(path, "tensor_masks")):
-                os.mkdir(os.path.join(path, "tensor_masks"))
-
+            # serialize tensors (.clone()d because they need to be resizeable)
             torch.save(vimage.clone(), os.path.join(path, f"tensor_images/img_down_{n*17+i}.pt"))
             torch.save(vmask.clone(), os.path.join(path, f"tensor_masks/_down_{n*17+i}.pt"))
 
-
-
-#sanitize("/home/quantumish/aux/fashion-seg/")
 serialize("/home/quantumish/aux/fashion-seg/")
